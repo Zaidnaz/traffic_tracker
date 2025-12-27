@@ -2,417 +2,433 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Traffic Lab Pro</title>
+    <title>Traffic Lab 3D</title>
     <style>
-        :root { --bg: #0f172a; --panel: rgba(15, 23, 42, 0.95); --border: #334155; --accent: #38bdf8; }
-        body { margin: 0; background: var(--bg); overflow: hidden; font-family: 'Segoe UI', system-ui, sans-serif; color: #e2e8f0; user-select: none; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; }
         
-        /* DASHBOARD LAYOUT */
-        #ui-layer { position: absolute; top: 0; left: 0; width: 320px; height: 100vh; padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; gap: 15px; pointer-events: none; z-index: 10; }
+        /* UI OVERLAY */
+        #ui {
+            position: absolute; top: 0; left: 0; padding: 20px;
+            color: #fff; pointer-events: none;
+            width: 300px;
+            text-shadow: 0 0 10px rgba(0,255,255,0.5);
+        }
         
-        .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px; pointer-events: auto; backdrop-filter: blur(8px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2); }
+        .panel {
+            background: rgba(0, 10, 20, 0.85);
+            border: 1px solid #00cccc;
+            border-radius: 8px;
+            padding: 15px;
+            pointer-events: auto;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            margin-bottom: 10px;
+        }
+
+        h1 { margin: 0 0 10px 0; font-size: 16px; letter-spacing: 2px; color: #00ffff; text-transform: uppercase; border-bottom: 1px solid #005555; padding-bottom: 5px;}
         
-        h3 { margin: 0 0 10px 0; font-size: 11px; text-transform: uppercase; color: #94a3b8; letter-spacing: 1px; border-bottom: 1px solid var(--border); padding-bottom: 4px; display: flex; justify-content: space-between; }
-        
+        .stat-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 12px; font-family: monospace; }
+        .val { color: #ff00ff; font-weight: bold; }
+
         /* CONTROLS */
-        .slider-group { margin-bottom: 8px; }
-        .slider-label { display: flex; justify-content: space-between; font-size: 10px; color: #cbd5e1; margin-bottom: 2px; }
-        input[type=range] { width: 100%; height: 4px; border-radius: 2px; -webkit-appearance: none; background: #334155; cursor: pointer; }
-        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; background: var(--accent); border-radius: 50%; }
-
-        button { width: 100%; padding: 8px; background: #1e293b; border: 1px solid var(--border); color: white; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600; transition: all 0.2s; margin-bottom: 5px; }
-        button:hover { background: #334155; }
-        button.primary { background: var(--accent); color: #0f172a; border: none; }
-        button.primary:hover { opacity: 0.9; }
-
-        /* METRICS */
-        .metric-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; font-family: 'Consolas', monospace; }
-        .val { color: var(--accent); font-weight: bold; }
+        button {
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid #00cccc;
+            color: #00ffff;
+            padding: 8px; width: 100%;
+            cursor: pointer;
+            margin-top: 5px;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 1px;
+        }
+        button:hover { background: #00cccc; color: #000; box-shadow: 0 0 15px #00cccc; }
         
-        canvas#graph { width: 100%; height: 80px; background: #1e293b; border: 1px solid var(--border); border-radius: 4px; margin-top: 5px; }
+        input[type=range] { width: 100%; accent-color: #ff00ff; }
+        label { font-size: 10px; color: #aaa; text-transform: uppercase;}
 
-        /* NOTIFICATIONS */
-        #toast { position: absolute; bottom: 20px; right: 20px; background: var(--accent); color: #0f172a; padding: 10px 20px; border-radius: 4px; font-weight: bold; transform: translateY(100px); transition: transform 0.3s; }
-        #toast.show { transform: translateY(0); }
     </style>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
 
-    <div id="ui-layer">
-        
+    <div id="ui">
         <div class="panel">
-            <h3>Simulation Status <span id="clock">00:00</span></h3>
-            <div class="metric-row"><span>Algorithm:</span> <span id="algo-disp" style="color:#4ade80">Smart AI</span></div>
-            <div class="metric-row"><span>Throughput:</span> <span class="val" id="disp-cpm">0</span> cpm</div>
-            <div class="metric-row"><span>Avg Wait:</span> <span class="val" id="disp-wait">0.0</span> sec</div>
-            <canvas id="graph" width="280" height="80"></canvas>
-            <div style="font-size:9px; color:#64748b; text-align:center">Wait Time History (1 min)</div>
+            <h1>Traffic OS v9.0</h1>
+            <div class="stat-row"><span>Alg:</span> <span id="ui-algo">SMART AI</span></div>
+            <div class="stat-row"><span>Phase:</span> <span id="ui-phase" style="color:lime">H_GREEN</span></div>
+            <div class="stat-row"><span>Cars:</span> <span id="ui-cars" class="val">0</span></div>
+            <div class="stat-row"><span>Throughput:</span> <span id="ui-cpm" class="val">0</span>/min</div>
         </div>
 
         <div class="panel">
-            <h3>Flow Control (Asymmetric)</h3>
+            <h1>System Control</h1>
+            <label>Spawn Rate (H / V)</label>
+            <input type="range" min="1" max="100" value="40" id="rate-h">
+            <input type="range" min="1" max="100" value="30" id="rate-v" style="margin-bottom:10px">
             
-            <div class="slider-group">
-                <div class="slider-label"><span>Horizontal Flow (West/East)</span> <span id="val-h">50%</span></div>
-                <input type="range" min="0" max="100" value="50" oninput="updateRate('h', this.value)">
-            </div>
-            
-            <div class="slider-group">
-                <div class="slider-label"><span>Vertical Flow (North/South)</span> <span id="val-v">30%</span></div>
-                <input type="range" min="0" max="100" value="30" oninput="updateRate('v', this.value)">
-            </div>
-
-            <div style="margin-top:10px; border-top:1px dashed #334155; padding-top:10px;">
-                <button onclick="toggleTime()" id="btn-time">🌞 Toggle Night Mode</button>
-                <button onclick="setAlgorithm()" id="btn-algo">🧠 AI / ⏱ Timer</button>
-            </div>
+            <button onclick="toggleCam()">🎥 Toggle Camera View</button>
+            <button onclick="toggleWireframe()">🕸 Toggle Grid Mode</button>
         </div>
-
-        <div class="panel">
-            <h3>Research Tools</h3>
-            <button class="primary" onclick="exportData()">📥 Download CSV Data</button>
-            <button class="danger" onclick="resetSim()" style="color:#f87171; border-color:#7f1d1d">⚠ Reset Simulation</button>
-        </div>
-
     </div>
 
-    <div id="toast">Data Exported!</div>
-    <canvas id="sim"></canvas>
-
     <script>
-        const canvas = document.getElementById('sim');
-        const ctx = canvas.getContext('2d');
-        const graphCanvas = document.getElementById('graph');
-        const graphCtx = graphCanvas.getContext('2d');
-        
-        // RESIZE
-        let w, h;
-        const resize = () => { w = window.innerWidth; h = window.innerHeight; canvas.width = w; canvas.height = h; };
-        window.addEventListener('resize', resize);
-        resize();
+        // --- 1. SCENE SETUP ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x050510); // Deep space blue
+        scene.fog = new THREE.FogExp2(0x050510, 0.002);
 
-        // --- CONFIG & STATE ---
-        const CFG = { road: 140, carW: 28, carL: 46, stop: 110 };
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 1, 1000);
+        camera.position.set(200, 200, 200);
+        camera.lookAt(0,0,0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // --- 2. ASSETS & MATERIALS ---
+        
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0x404040, 2); // Soft white light
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+        dirLight.position.set(50, 200, 100);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        scene.add(dirLight);
+
+        // Neon City Lights (Point Lights)
+        const cityLight1 = new THREE.PointLight(0x00ffff, 2, 300);
+        cityLight1.position.set(-100, 50, -100);
+        scene.add(cityLight1);
+        const cityLight2 = new THREE.PointLight(0xff00ff, 2, 300);
+        cityLight2.position.set(100, 50, 100);
+        scene.add(cityLight2);
+
+        // Geometries
+        const carGeo = new THREE.BoxGeometry(10, 6, 20); // Width, Height, Length
+        const roadGeo = new THREE.PlaneGeometry(60, 600);
+        const groundGeo = new THREE.PlaneGeometry(1000, 1000);
+
+        // Materials
+        const roadMat = new THREE.MeshStandardMaterial({ 
+            color: 0x111111, roughness: 0.2, metalness: 0.5 
+        });
+        const groundMat = new THREE.MeshStandardMaterial({ 
+            color: 0x020202, roughness: 0.8 
+        });
+        const stopLineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        
+        // --- 3. ENVIRONMENT BUILDING ---
+        
+        // Ground
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // Grid Helper (Tron style)
+        const gridHelper = new THREE.GridHelper(1000, 50, 0x00ffff, 0x111122);
+        gridHelper.position.y = 0.1;
+        scene.add(gridHelper);
+
+        // Roads
+        function createRoad(rotY) {
+            const road = new THREE.Mesh(roadGeo, roadMat);
+            road.rotation.x = -Math.PI / 2;
+            road.rotation.z = rotY;
+            road.position.y = 0.2;
+            road.receiveShadow = true;
+            scene.add(road);
+        }
+        createRoad(0); // Vertical
+        createRoad(Math.PI / 2); // Horizontal
+
+        // Traffic Light Pillars
+        const poleGeo = new THREE.CylinderGeometry(1, 1, 30, 8);
+        const poleMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+        
+        const lights = { h: [], v: [] }; // Store meshes to change colors
+
+        function createTrafficLight(x, z, axis) {
+            const group = new THREE.Group();
+            
+            // Pole
+            const pole = new THREE.Mesh(poleGeo, poleMat);
+            pole.position.y = 15;
+            pole.castShadow = true;
+            group.add(pole);
+
+            // Box
+            const box = new THREE.Mesh(new THREE.BoxGeometry(6, 12, 6), new THREE.MeshStandardMaterial({ color: 0x111111 }));
+            box.position.y = 28;
+            group.add(box);
+
+            // Light Bulb (The glowing part)
+            const bulb = new THREE.Mesh(new THREE.SphereGeometry(2, 16, 16), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
+            bulb.position.set(0, 28, 3.5);
+            group.add(bulb);
+            
+            // Add PointLight for glow
+            const glow = new THREE.PointLight(0xff0000, 2, 50);
+            glow.position.set(0, 28, 5);
+            group.add(glow);
+
+            group.position.set(x, 0, z);
+            // Rotate to face intersection
+            if (axis === 'H') group.rotation.y = Math.PI / 2;
+            
+            scene.add(group);
+
+            // Store ref to update color later
+            const lightObj = { mesh: bulb, glow: glow };
+            if (axis === 'H') lights.h.push(lightObj);
+            else lights.v.push(lightObj);
+        }
+
+        createTrafficLight(-35, -35, 'V');
+        createTrafficLight(35, 35, 'V');
+        createTrafficLight(-35, 35, 'H');
+        createTrafficLight(35, -35, 'H');
+
+
+        // --- 4. GAME LOGIC (The Simulation) ---
+        
         const STATE = {
             cars: [],
             phase: 'H_GREEN',
             lastSwitch: 0,
             frame: 0,
-            rates: { h: 0.05, v: 0.03 }, // Spawn probabilities
-            isNight: true,
-            isAI: true,
-            // Data Collecting
-            dataLog: [], // Stores [Time, H_Queue, V_Queue, AvgWait]
-            completedTrips: 0,
-            totalWait: 0,
-            startTime: Date.now()
+            simSpeed: 1.0
         };
 
-        // --- CLASSES ---
-        class Car {
+        const LOGIC_CFG = { stopOffset: 45 };
+
+        // Car Mesh Pool (Performance Optimization)
+        // Instead of new Mesh() every spawn, we recycle them.
+        const carMeshes = []; 
+        function getCarMesh(color) {
+            const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.1, metalness: 0.6 });
+            const mesh = new THREE.Mesh(carGeo, mat);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            
+            // Add Headlights
+            const headL = new THREE.Mesh(new THREE.BoxGeometry(8, 2, 1), new THREE.MeshBasicMaterial({color: 0xffffaa}));
+            headL.position.set(0, 0, 10.1); // Front
+            mesh.add(headL);
+            
+            const tailL = new THREE.Mesh(new THREE.BoxGeometry(8, 2, 1), new THREE.MeshBasicMaterial({color: 0xff0000}));
+            tailL.position.set(0, 0, -10.1); // Back
+            mesh.add(tailL);
+
+            scene.add(mesh);
+            return mesh;
+        }
+
+        class CarAgent {
             constructor(axis, dir) {
-                this.axis = axis; // 'H' or 'V'
-                this.dir = dir;   // 1 (Right/Down) or -1 (Left/Up)
+                this.axis = axis;
+                this.dir = dir; // 1 or -1
+                this.speed = 0;
+                this.maxSpeed = 1.5 + Math.random() * 0.5; // ThreeJS units per frame
                 
-                // Dimensions (Swapped for H/V)
-                this.w = (axis === 'H') ? CFG.carL : CFG.carW;
-                this.h = (axis === 'H') ? CFG.carW : CFG.carL;
-                
-                // Start Position
+                // Logic Position (2D)
                 if (axis === 'H') {
-                    this.x = (dir === 1) ? -100 : w + 100;
-                    this.y = h/2 + (dir * 20); // Lane offset
+                    this.lx = (dir === 1) ? -300 : 300;
+                    this.lz = (dir === 1) ? 15 : -15; // Right lane
                 } else {
-                    this.x = w/2 - (dir * 20);
-                    this.y = (dir === 1) ? -100 : h + 100;
+                    this.lx = (dir === 1) ? -15 : 15;
+                    this.lz = (dir === 1) ? -300 : 300;
                 }
 
-                // Stats
-                this.speed = 0;
-                this.maxSpeed = 6 + Math.random() * 3;
-                this.waitFrameCount = 0;
-                this.entryTime = Date.now();
-                
-                // Visuals
-                this.color = `hsl(${Math.random()*360}, 70%, 50%)`;
-                this.isEmergency = Math.random() < 0.02;
+                // 3D Mesh
+                const color = Math.random() > 0.95 ? 0xffffff : Math.random() * 0xffffff; // 5% White (Police)
+                this.mesh = getCarMesh(color);
+                this.updateMesh();
+
+                // Rotate mesh based on direction
+                if (axis === 'H') this.mesh.rotation.y = (dir === 1) ? Math.PI/2 : -Math.PI/2;
+                else this.mesh.rotation.y = (dir === 1) ? 0 : Math.PI;
             }
 
-            update() {
-                // 1. Target Speed Calculation
-                let target = this.maxSpeed;
+            updateMesh() {
+                this.mesh.position.set(this.lx, 3, this.lz);
+            }
 
+            destroy() {
+                scene.remove(this.mesh);
+                this.mesh.geometry.dispose();
+                this.mesh.material.dispose();
+            }
+
+            move() {
+                // PHYSICS LOGIC (Same as before, simplified for 3D units)
+                let target = this.maxSpeed;
+                
                 // Car Ahead
                 const ahead = this.findAhead();
                 if (ahead) {
-                    const dist = Math.abs((this.axis==='H' ? ahead.x - this.x : ahead.y - this.y));
-                    if (dist < 120) target = Math.min(target, (dist - 70) * 0.1);
+                    const dist = (this.axis==='H') 
+                        ? (ahead.lx - this.lx)*this.dir 
+                        : (ahead.lz - this.lz)*this.dir;
+                    
+                    if (dist > 0 && dist < 40) target = 0;
+                    else if (dist < 80) target *= 0.3;
                 }
 
                 // Traffic Light
-                const stopLine = (this.axis==='H') ? w/2 - (this.dir*CFG.stop) : h/2 - (this.dir*CFG.stop);
-                const distToLine = (this.axis==='H') ? (stopLine - this.x)*this.dir : (stopLine - this.y)*this.dir;
+                const stopLine = (this.dir === 1) ? -LOGIC_CFG.stopOffset : LOGIC_CFG.stopOffset;
+                // Distance to center is easier
+                const distToCenter = (this.axis === 'H') ? Math.abs(this.lx) : Math.abs(this.lz);
+                const approaching = (this.axis==='H') ? (this.lx * this.dir < 0) : (this.lz * this.dir < 0);
                 
-                let isRed = false;
-                // Logic: If I am H, and V is Green -> Red.
-                if (this.axis === 'H' && STATE.phase.includes('V')) isRed = true;
-                if (this.axis === 'V' && STATE.phase.includes('H')) isRed = true;
-                // Yellow Logic
-                if (STATE.phase.includes('YELLOW')) {
-                    // If yellow matching my axis, stop if I can
-                    if (STATE.phase.includes(this.axis) && distToLine > 60) isRed = true;
+                let red = false;
+                if (approaching) {
+                    if (this.axis === 'H' && STATE.phase.includes('V')) red = true;
+                    if (this.axis === 'V' && STATE.phase.includes('H')) red = true;
+                    if (STATE.phase.includes('YELLOW') && distToCenter < 60) red = false; // Run yellow if close
+                    else if (STATE.phase.includes('YELLOW') && STATE.phase.includes(this.axis)) red = true;
                 }
 
-                if (isRed && distToLine > 0 && distToLine < 150) {
-                    target = Math.min(target, (distToLine - 20) * 0.08);
+                if (red && distToCenter < 60 && distToCenter > 30) {
+                    target = 0;
                 }
 
-                // Physics
-                if (this.speed < target) this.speed += 0.2;
-                else this.speed -= 0.4;
+                if (this.speed < target) this.speed += 0.05;
+                else this.speed -= 0.1;
                 if (this.speed < 0) this.speed = 0;
 
-                // Move
-                if (this.axis === 'H') this.x += this.speed * this.dir;
-                else this.y += this.speed * this.dir;
+                // Apply Move
+                if (this.axis === 'H') this.lx += this.speed * this.dir;
+                else this.lz += this.speed * this.dir;
 
-                // Collect Wait Time
-                if (this.speed < 1 && distToLine > 0 && distToLine < 200) this.waitFrameCount++;
+                this.updateMesh();
             }
 
             findAhead() {
-                let closest = null, min = Infinity;
+                // Simple search
+                let min = Infinity;
+                let closest = null;
                 STATE.cars.forEach(c => {
-                    if (c.axis !== this.axis || c.dir !== this.dir || c === this) return;
-                    // Check if c is ahead
-                    const dist = (this.axis==='H') ? (c.x - this.x)*this.dir : (c.y - this.y)*this.dir;
+                    if (c === this || c.axis !== this.axis || c.dir !== this.dir) return;
+                    const dist = (this.axis==='H') ? (c.lx - this.lx)*this.dir : (c.lz - this.lz)*this.dir;
                     if (dist > 0 && dist < min) { min = dist; closest = c; }
                 });
                 return closest;
             }
-
-            draw() {
-                const x = this.x, y = this.y;
-                // 2.5D Projection
-                const lift = -12; 
-                
-                // Shadow
-                ctx.fillStyle = 'rgba(0,0,0,0.4)';
-                ctx.fillRect(x+8, y+8, this.w, this.h);
-
-                // Body (Side)
-                ctx.fillStyle = '#1e293b'; 
-                ctx.fillRect(x, y, this.w, this.h);
-                
-                // Body (Top)
-                ctx.fillStyle = this.isEmergency ? '#fff' : this.color;
-                ctx.fillRect(x, y+lift, this.w, this.h);
-
-                // Lights
-                if (STATE.isNight) {
-                    // Headlights
-                    ctx.save();
-                    ctx.globalCompositeOperation = 'screen';
-                    const grad = ctx.createLinearGradient(0,0, (this.axis==='H'?200:0), (this.axis==='V'?200:0));
-                    grad.addColorStop(0, 'rgba(255,255,200,0.4)'); 
-                    grad.addColorStop(1, 'rgba(255,255,200,0)');
-                    
-                    ctx.fillStyle = grad;
-                    ctx.beginPath();
-                    // Simplified Cone drawing based on direction...
-                    // (Omitted slightly for brevity, basic glow:)
-                    ctx.arc(x+this.w/2, y+this.h/2 + lift, 40, 0, Math.PI*2);
-                    ctx.fill();
-                    ctx.restore();
-                }
-
-                // Brake Lights
-                if (this.speed < 0.5) {
-                    ctx.fillStyle = '#ef4444';
-                    ctx.shadowColor = '#ef4444'; ctx.shadowBlur = 10;
-                    // Logic to place red dots at "rear" based on direction
-                    // ... (simplified center glow for code golf)
-                    ctx.fillRect(x + this.w/2 - 2, y + lift + this.h/2 - 2, 4, 4);
-                    ctx.shadowBlur = 0;
-                }
-            }
         }
 
-        // --- CORE SYSTEMS ---
 
-        function updateRate(axis, val) {
-            STATE.rates[axis] = val / 1000; // Map 0-100 to probability
-            document.getElementById(`val-${axis}`).innerText = val + "%";
-        }
+        // --- 5. CONTROLLER ---
 
-        function toggleTime() {
-            STATE.isNight = !STATE.isNight;
-            document.getElementById('btn-time').innerText = STATE.isNight ? "🌞 Toggle Day Mode" : "🌙 Toggle Night Mode";
-        }
+        function updateLights() {
+            // Colors
+            const H_COL = STATE.phase.includes('H_GREEN') ? 0x00ff00 : (STATE.phase === 'H_YELLOW' ? 0xffff00 : 0xff0000);
+            const V_COL = STATE.phase.includes('V_GREEN') ? 0x00ff00 : (STATE.phase === 'V_YELLOW' ? 0xffff00 : 0xff0000);
 
-        function setAlgorithm() {
-            STATE.isAI = !STATE.isAI;
-            const el = document.getElementById('algo-disp');
-            el.innerText = STATE.isAI ? "Smart AI" : "Fixed Timer";
-            el.style.color = STATE.isAI ? "#4ade80" : "#fbbf24";
-        }
-
-        function exportData() {
-            let csv = "Time_Sec,H_Queue,V_Queue,Phase\n";
-            STATE.dataLog.forEach(row => {
-                csv += `${row.time},${row.h},${row.v},${row.p}\n`;
-            });
+            lights.h.forEach(l => { l.mesh.material.color.setHex(H_COL); l.glow.color.setHex(H_COL); });
+            lights.v.forEach(l => { l.mesh.material.color.setHex(V_COL); l.glow.color.setHex(V_COL); });
             
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url; a.download = 'traffic_data.csv';
-            a.click();
-            
-            const t = document.getElementById('toast');
-            t.classList.add('show');
-            setTimeout(() => t.classList.remove('show'), 2000);
+            document.getElementById('ui-phase').innerText = STATE.phase;
+            document.getElementById('ui-phase').style.color = STATE.phase.includes('GREEN') ? 'lime' : (STATE.phase.includes('YELLOW')?'yellow':'red');
         }
 
-        function resetSim() {
-            STATE.cars = [];
-            STATE.dataLog = [];
-            STATE.completedTrips = 0;
-            STATE.totalWait = 0;
-            STATE.startTime = Date.now();
-        }
-
-        // --- LOOP ---
-        function loop() {
+        function runLogic() {
             STATE.frame++;
-            const now = Date.now();
-            
-            // 1. Spawner (Asymmetric)
-            if (Math.random() < STATE.rates.h) STATE.cars.push(new Car('H', 1)); // West -> East
-            if (Math.random() < STATE.rates.h) STATE.cars.push(new Car('H', -1)); // East -> West
-            if (Math.random() < STATE.rates.v) STATE.cars.push(new Car('V', 1)); // North -> South
-            if (Math.random() < STATE.rates.v) STATE.cars.push(new Car('V', -1)); // South -> North
-
-            // 2. Logic & Stats
-            const hQ = STATE.cars.filter(c => c.axis==='H' && c.speed < 1).length;
-            const vQ = STATE.cars.filter(c => c.axis==='V' && c.speed < 1).length;
             
             // AI Controller
-            const timeInPhase = STATE.frame - STATE.lastSwitch;
-            if (STATE.isAI) {
-                // Pressure System
-                if (STATE.phase === 'H_GREEN' && timeInPhase > 120) {
-                    if (vQ > hQ + 2 || (hQ === 0 && vQ > 0)) switchP('H_YELLOW');
-                } else if (STATE.phase === 'H_YELLOW' && timeInPhase > 90) {
-                    switchP('V_GREEN');
-                } else if (STATE.phase === 'V_GREEN' && timeInPhase > 120) {
-                    if (hQ > vQ + 2 || (vQ === 0 && hQ > 0)) switchP('V_YELLOW');
-                } else if (STATE.phase === 'V_YELLOW' && timeInPhase > 90) {
-                    switchP('H_GREEN');
-                }
-            } else {
-                // Dumb Timer (300 frames = ~5s)
-                if (timeInPhase > 400 && !STATE.phase.includes('YELLOW')) {
-                    switchP(STATE.phase.includes('H') ? 'H_YELLOW' : 'V_YELLOW');
-                } else if (timeInPhase > 120 && STATE.phase.includes('YELLOW')) {
-                    switchP(STATE.phase.includes('H') ? 'V_GREEN' : 'H_GREEN');
-                }
+            const hQ = STATE.cars.filter(c => c.axis==='H' && c.speed < 0.1).length;
+            const vQ = STATE.cars.filter(c => c.axis==='V' && c.speed < 0.1).length;
+            
+            const time = STATE.frame - STATE.lastSwitch;
+            
+            // Pressure System AI
+            if (STATE.phase === 'H_GREEN') {
+                if (time > 120 && (vQ > hQ + 1 || hQ === 0)) { STATE.phase = 'H_YELLOW'; STATE.lastSwitch = STATE.frame; }
+            } else if (STATE.phase === 'H_YELLOW' && time > 60) {
+                 STATE.phase = 'V_GREEN'; STATE.lastSwitch = STATE.frame;
+            } else if (STATE.phase === 'V_GREEN') {
+                if (time > 120 && (hQ > vQ + 1 || vQ === 0)) { STATE.phase = 'V_YELLOW'; STATE.lastSwitch = STATE.frame; }
+            } else if (STATE.phase === 'V_YELLOW' && time > 60) {
+                STATE.phase = 'H_GREEN'; STATE.lastSwitch = STATE.frame;
             }
 
-            // 3. Update Cars
-            STATE.cars.forEach(c => c.update());
-            STATE.cars = STATE.cars.filter(c => {
-                const active = (c.x > -150 && c.x < w+150 && c.y > -150 && c.y < h+150);
-                if (!active) {
-                    STATE.completedTrips++;
-                    STATE.totalWait += (c.waitFrameCount / 60);
+            updateLights();
+
+            // Spawner
+            const rateH = document.getElementById('rate-h').value / 2000;
+            const rateV = document.getElementById('rate-v').value / 2000;
+
+            if (Math.random() < rateH) STATE.cars.push(new CarAgent('H', 1));
+            if (Math.random() < rateH) STATE.cars.push(new CarAgent('H', -1));
+            if (Math.random() < rateV) STATE.cars.push(new CarAgent('V', 1));
+            if (Math.random() < rateV) STATE.cars.push(new CarAgent('V', -1));
+
+            // Move Cars
+            STATE.cars.forEach(c => c.move());
+            
+            // Cleanup
+            for (let i = STATE.cars.length - 1; i >= 0; i--) {
+                const c = STATE.cars[i];
+                if (Math.abs(c.lx) > 350 || Math.abs(c.lz) > 350) {
+                    c.destroy();
+                    STATE.cars.splice(i, 1);
                 }
-                return active;
-            });
-
-            // 4. Data Logging (Every 1s / 60 frames)
-            if (STATE.frame % 60 === 0) {
-                const runTime = Math.floor((now - STATE.startTime)/1000);
-                document.getElementById('clock').innerText = new Date(runTime * 1000).toISOString().substr(14, 5);
-                
-                // Log
-                STATE.dataLog.push({ time: runTime, h: hQ, v: vQ, p: STATE.phase });
-                
-                // Update Metrics UI
-                const mins = runTime / 60;
-                const cpm = mins > 0 ? (STATE.completedTrips / mins).toFixed(1) : 0;
-                const avgWait = STATE.completedTrips > 0 ? (STATE.totalWait / STATE.completedTrips).toFixed(1) : 0;
-                
-                document.getElementById('disp-cpm').innerText = cpm;
-                document.getElementById('disp-wait').innerText = avgWait;
-                
-                updateGraph(avgWait);
             }
-
-            // 5. Render
-            ctx.fillStyle = STATE.isNight ? '#0f172a' : '#334155'; // Day/Night BG
-            ctx.fillRect(0,0,w,h);
-            drawEnv();
             
-            // Depth Sort
-            STATE.cars.sort((a,b) => a.y - b.y);
-            STATE.cars.forEach(c => c.draw());
-
-            requestAnimationFrame(loop);
+            document.getElementById('ui-cars').innerText = STATE.cars.length;
         }
 
-        function switchP(p) {
-            STATE.phase = p;
-            STATE.lastSwitch = STATE.frame;
+        // --- 6. RENDER LOOP ---
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            runLogic();
+            controls.update();
+            renderer.render(scene, camera);
         }
 
-        function drawEnv() {
-            const rw = CFG.road;
-            ctx.fillStyle = STATE.isNight ? '#1e293b' : '#475569'; // Road Color
-            ctx.fillRect(0, h/2 - rw/2, w, rw);
-            ctx.fillRect(w/2 - rw/2, 0, rw, h);
-            
-            // Stop Lines
-            const stop = CFG.stop;
-            const hCol = STATE.phase.includes('H') ? '#22c55e' : '#ef4444';
-            const vCol = STATE.phase.includes('V') ? '#22c55e' : '#ef4444';
-            
-            ctx.lineWidth = 6;
-            ctx.shadowBlur = STATE.isNight ? 15 : 0;
-            
-            ctx.strokeStyle = hCol; ctx.shadowColor = hCol;
-            ctx.beginPath(); ctx.moveTo(w/2 - stop, h/2); ctx.lineTo(w/2 - stop, h/2+rw/2); ctx.stroke(); // Left
-            ctx.beginPath(); ctx.moveTo(w/2 + stop, h/2); ctx.lineTo(w/2 + stop, h/2-rw/2); ctx.stroke(); // Right (Inverted for realism)
-
-            ctx.strokeStyle = vCol; ctx.shadowColor = vCol;
-            ctx.beginPath(); ctx.moveTo(w/2 - rw/2, h/2 - stop); ctx.lineTo(w/2, h/2 - stop); ctx.stroke(); // Top
-            ctx.beginPath(); ctx.moveTo(w/2 + rw/2, h/2 + stop); ctx.lineTo(w/2, h/2 + stop); ctx.stroke(); // Bottom
-
-            ctx.shadowBlur = 0;
+        // --- EXTRAS ---
+        function toggleWireframe() {
+            ground.visible = !ground.visible;
+        }
+        
+        let camMode = 0;
+        function toggleCam() {
+            camMode = (camMode + 1) % 3;
+            if (camMode === 0) { // Default
+                camera.position.set(200, 200, 200);
+                camera.lookAt(0,0,0);
+            } else if (camMode === 1) { // Top Down
+                camera.position.set(0, 400, 0);
+                camera.lookAt(0,0,0);
+            } else { // Street Level
+                camera.position.set(-50, 20, -50);
+                camera.lookAt(20, 0, 20);
+            }
         }
 
-        // --- GRAPH ---
-        let graphHistory = new Array(30).fill(0);
-        function updateGraph(val) {
-            graphHistory.push(parseFloat(val));
-            graphHistory.shift();
-            
-            graphCtx.fillStyle = '#1e293b';
-            graphCtx.fillRect(0,0,280,80);
-            
-            graphCtx.strokeStyle = '#38bdf8';
-            graphCtx.beginPath();
-            const max = Math.max(10, ...graphHistory);
-            
-            graphHistory.forEach((v, i) => {
-                const x = (i/29) * 280;
-                const y = 80 - (v/max * 80);
-                if (i===0) graphCtx.moveTo(x,y); else graphCtx.lineTo(x,y);
-            });
-            graphCtx.stroke();
-        }
+        // Handle Resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
 
-        loop();
+        animate();
+
     </script>
 </body>
 </html>
